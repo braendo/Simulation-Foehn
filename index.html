@@ -431,7 +431,7 @@ function renderAufgaben() {
     const card = document.createElement('div');
     card.className = 'question-card';
     card.innerHTML = `
-      <div class="question-type">Aufgabe ${idx + 1} von ${aufgabenData.length} &nbsp;·&nbsp; <span style="font-family:monospace;background:#f1efe8;padding:2px 6px;border-radius:4px;font-size:11px;">${a.formula}</span></div>
+      <div class="question-type">Aufgabe ${idx + 1} von ${aufgabenData.length}</div>
       <div class="question-header">${a.title}</div>
       <div style="font-size:14px;line-height:1.7;color:#444441;margin-bottom:16px;">${a.text}</div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
@@ -440,7 +440,9 @@ function renderAufgaben() {
         <button class="check-btn" onclick="checkAufgabe(${idx})" id="aufg-check-${idx}" style="flex:0 0 auto;width:auto;padding:8px 18px;">Prüfen</button>
         <button onclick="toggleHint(${idx})" style="flex:0 0 auto;width:auto;padding:8px 14px;font-size:13px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:#fff;cursor:pointer;color:#5F5E5A;">💡 Tipp</button>
       </div>
-      <div id="aufg-hint-${idx}" style="display:none;background:#FFFBEA;border:0.5px solid #E8C84A;border-radius:8px;padding:10px 14px;font-size:13px;color:#665A00;margin-bottom:8px;">${a.hint}</div>
+      <div id="aufg-hint-${idx}" style="display:none;background:#FFFBEA;border:0.5px solid #E8C84A;border-radius:8px;padding:10px 14px;font-size:13px;color:#665A00;margin-bottom:8px;">
+        <div style="margin-bottom:6px;font-family:monospace;background:rgba(0,0,0,0.06);display:inline-block;padding:2px 8px;border-radius:4px;">${a.formula}</div>
+      </div>
       <div id="aufg-feedback-${idx}"></div>
     `;
     container.appendChild(card);
@@ -449,7 +451,13 @@ function renderAufgaben() {
 
 function toggleHint(idx) {
   const hint = document.getElementById('aufg-hint-' + idx);
-  hint.style.display = hint.style.display === 'none' ? 'block' : 'none';
+  const attempts = aufgabenAnswers[idx] || 0;
+  if(attempts === 0) {
+    // Noch kein Fehlversuch: nur Formel zeigen, Hinweistext versteckt
+    hint.style.display = hint.style.display === 'none' ? 'block' : 'none';
+  } else {
+    hint.style.display = hint.style.display === 'none' ? 'block' : 'none';
+  }
 }
 
 function clearAufgFeedback(idx) {
@@ -483,14 +491,12 @@ function checkAufgabe(idx) {
   } else {
     aufgabenAnswers[idx] = (aufgabenAnswers[idx] || 0) + 1;
     const attempts = aufgabenAnswers[idx];
-    let extra = '';
-    if(attempts >= 2) {
-      extra = `<br><details style="margin-top:6px;"><summary style="cursor:pointer;font-weight:500;">Lösungsweg anzeigen</summary>
-        <ol style="margin:8px 0 0 16px;padding:0;line-height:1.8;">
-          ${a.steps.map(s => '<li>' + s + '</li>').join('')}
-        </ol></details>`;
+    // Nach erstem Fehlversuch: Tipp-Inhalt vollständig anzeigen
+    if(attempts === 1) {
+      const hintEl = document.getElementById('aufg-hint-' + idx);
+      hintEl.innerHTML = `<div style="margin-bottom:6px;font-family:monospace;background:rgba(0,0,0,0.06);display:inline-block;padding:2px 8px;border-radius:4px;">${a.formula}</div><br>${a.hint}`;
     }
-    feedbackEl.innerHTML = `<div class="feedback incorrect">✗ Leider falsch (Versuch ${attempts}). Versuche es nochmal!${extra}</div>`;
+    feedbackEl.innerHTML = `<div class="feedback incorrect">✗ Leider falsch. Versuche es nochmal!</div>`;
   }
 }
 
@@ -1397,16 +1403,4 @@ function checkQuizCompletion() {
     strobeInterval = val;
     const fmt = val.toFixed(2).replace('.', ',');
     strobeOut.textContent = fmt + ' s';
-    strobeText.value = fmt;
-    draw();
-  });
-
-  [showV, showVcomp, showF, showTrail, showStrobe].forEach(function(el){ el.addEventListener('change', draw); });
-
-  setInterval(function(){ if(!running) draw(); }, 80);
-
-  reset();
-})();
-</script>
-</body>
-</html>
+    strobeTex
