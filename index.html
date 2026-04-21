@@ -72,6 +72,12 @@
   .screenshot-btn:hover {
     background: #3C3489;
   }
+  .speed-btn { font-size: 13px; }
+  .speed-active {
+    background: #534AB7 !important;
+    color: white !important;
+    border-color: #534AB7 !important;
+  }
   .slider-group {
     display: flex;
     flex-direction: column;
@@ -230,6 +236,7 @@
   <div class="tabs">
     <button class="tab active" onclick="switchTab('simulation')">Simulation</button>
     <button class="tab" onclick="switchTab('quiz')">Quiz</button>
+    <button class="tab" onclick="switchTab('aufgaben')">Rechenaufgaben</button>
   </div>
 
   <div id="simulation-tab" class="tab-content active">
@@ -242,6 +249,12 @@
         <div class="btn-row">
           <button id="startBtn">Start</button>
           <button id="resetBtn">Reset</button>
+        </div>
+
+        <div class="btn-row" id="speedBtns">
+          <button id="speed100" class="speed-btn speed-active">1×</button>
+          <button id="speed50"  class="speed-btn">½×</button>
+          <button id="speed25"  class="speed-btn">¼×</button>
         </div>
 
         <button class="screenshot-btn" id="screenshotBtn">📸 Screenshot</button>
@@ -303,9 +316,184 @@
   <div id="quiz-tab" class="tab-content">
     <div class="quiz-container" id="quiz-container"></div>
   </div>
+
+  <div id="aufgaben-tab" class="tab-content">
+    <div class="quiz-container" id="aufgaben-container"></div>
+  </div>
 </div>
 
 <script>
+
+const aufgabenData = [
+  {
+    id: 0,
+    title: 'Aufgabe 1 – Geschwindigkeitsänderung berechnen',
+    text: 'Eine Kugel mit der Masse <strong>m = 2 kg</strong> wird für <strong>Δt = 3 s</strong> mit einer Kraft von <strong>F = 6 N</strong> horizontal beschleunigt. Berechne die Geschwindigkeitsänderung Δv.',
+    hint: 'Nutze: F · Δt = m · Δv → Δv = (F · Δt) / m',
+    formula: 'F · Δt = m · Δv',
+    answer: 9,
+    unit: 'm/s',
+    tolerance: 0.05,
+    steps: [
+      'Formel aufstellen: F · Δt = m · Δv',
+      'Umstellen: Δv = (F · Δt) / m',
+      'Einsetzen: Δv = (6 N · 3 s) / 2 kg',
+      'Ergebnis: Δv = 9 m/s'
+    ]
+  },
+  {
+    id: 1,
+    title: 'Aufgabe 2 – Kraft berechnen',
+    text: 'Eine Kugel (m = <strong>0,5 kg</strong>) erfährt in <strong>Δt = 2 s</strong> eine Geschwindigkeitsänderung von <strong>Δv = 8 m/s</strong>. Wie groß ist die wirkende Kraft F?',
+    hint: 'Nutze: F · Δt = m · Δv → F = (m · Δv) / Δt',
+    formula: 'F · Δt = m · Δv',
+    answer: 2,
+    unit: 'N',
+    tolerance: 0.05,
+    steps: [
+      'Formel aufstellen: F · Δt = m · Δv',
+      'Umstellen: F = (m · Δv) / Δt',
+      'Einsetzen: F = (0,5 kg · 8 m/s) / 2 s',
+      'Ergebnis: F = 2 N'
+    ]
+  },
+  {
+    id: 2,
+    title: 'Aufgabe 3 – Einwirkzeit berechnen',
+    text: 'Auf eine Kugel (m = <strong>1 kg</strong>) wirkt eine Kraft von <strong>F = 4 N</strong>. Die Geschwindigkeit soll um <strong>Δv = 6 m/s</strong> zunehmen. Wie lange muss die Kraft wirken?',
+    hint: 'Nutze: F · Δt = m · Δv → Δt = (m · Δv) / F',
+    formula: 'F · Δt = m · Δv',
+    answer: 1.5,
+    unit: 's',
+    tolerance: 0.05,
+    steps: [
+      'Formel aufstellen: F · Δt = m · Δv',
+      'Umstellen: Δt = (m · Δv) / F',
+      'Einsetzen: Δt = (1 kg · 6 m/s) / 4 N',
+      'Ergebnis: Δt = 1,5 s'
+    ]
+  },
+  {
+    id: 3,
+    title: 'Aufgabe 4 – Beschleunigung berechnen',
+    text: 'Eine Kugel ändert ihre Geschwindigkeit in <strong>Δt = 4 s</strong> um <strong>Δv = 12 m/s</strong>. Berechne die Beschleunigung a.',
+    hint: 'Nutze: a = Δv / Δt',
+    formula: 'a = Δv / Δt',
+    answer: 3,
+    unit: 'm/s²',
+    tolerance: 0.05,
+    steps: [
+      'Formel: a = Δv / Δt',
+      'Einsetzen: a = 12 m/s / 4 s',
+      'Ergebnis: a = 3 m/s²'
+    ]
+  },
+  {
+    id: 4,
+    title: 'Aufgabe 5 – Kraft über Newton',
+    text: 'Eine Kugel (m = <strong>3 kg</strong>) wird mit <strong>a = 5 m/s²</strong> beschleunigt. Wie groß ist die Kraft F?',
+    hint: 'Nutze: F = m · a',
+    formula: 'F = m · a',
+    answer: 15,
+    unit: 'N',
+    tolerance: 0.05,
+    steps: [
+      'Formel: F = m · a',
+      'Einsetzen: F = 3 kg · 5 m/s²',
+      'Ergebnis: F = 15 N'
+    ]
+  },
+  {
+    id: 5,
+    title: 'Aufgabe 6 – Verbundaufgabe (Simulation nachrechnen)',
+    text: 'In der Simulation fällt eine Kugel (m = <strong>1 kg</strong>) mit v<sub>y</sub> = <strong>2 m/s</strong> durch einen Kraftbereich der Höhe <strong>h = 0,20 m</strong>. Die horizontale Kraft beträgt <strong>F = 5 N</strong>. Berechne die horizontale Geschwindigkeit v<sub>x</sub>, die die Kugel nach dem Kraftbereich hat.',
+    hint: 'Zuerst Einwirkzeit aus Δt = h / v berechnen, dann Δv = (F · Δt) / m',
+    formula: 'Δt = h / v,  Δv = (F · Δt) / m',
+    answer: 0.5,
+    unit: 'm/s',
+    tolerance: 0.02,
+    steps: [
+      'Einwirkzeit: Δt = h / v_y = 0,20 m / 2 m/s = 0,1 s',
+      'Geschwindigkeitsänderung: Δv = (F · Δt) / m = (5 N · 0,1 s) / 1 kg',
+      'Da v_x vorher = 0: v_x = Δv = 0,5 m/s'
+    ]
+  }
+];
+
+let aufgabenRendered = false;
+let aufgabenAnswers = {};
+
+function renderAufgaben() {
+  const container = document.getElementById('aufgaben-container');
+  container.innerHTML = '';
+
+  aufgabenData.forEach((a, idx) => {
+    const card = document.createElement('div');
+    card.className = 'question-card';
+    card.innerHTML = `
+      <div class="question-type">Aufgabe ${idx + 1} von ${aufgabenData.length} &nbsp;·&nbsp; <span style="font-family:monospace;background:#f1efe8;padding:2px 6px;border-radius:4px;font-size:11px;">${a.formula}</span></div>
+      <div class="question-header">${a.title}</div>
+      <div style="font-size:14px;line-height:1.7;color:#444441;margin-bottom:16px;">${a.text}</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <input type="text" id="aufg-input-${idx}" class="value-input" style="width:110px;font-size:15px;padding:6px 10px;" placeholder="Antwort" oninput="clearAufgFeedback(${idx})">
+        <span style="font-size:14px;color:#5F5E5A;">${a.unit}</span>
+        <button class="check-btn" onclick="checkAufgabe(${idx})" id="aufg-check-${idx}" style="flex:0 0 auto;width:auto;padding:8px 18px;">Prüfen</button>
+        <button onclick="toggleHint(${idx})" style="flex:0 0 auto;width:auto;padding:8px 14px;font-size:13px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:#fff;cursor:pointer;color:#5F5E5A;">💡 Tipp</button>
+      </div>
+      <div id="aufg-hint-${idx}" style="display:none;background:#FFFBEA;border:0.5px solid #E8C84A;border-radius:8px;padding:10px 14px;font-size:13px;color:#665A00;margin-bottom:8px;">${a.hint}</div>
+      <div id="aufg-feedback-${idx}"></div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function toggleHint(idx) {
+  const hint = document.getElementById('aufg-hint-' + idx);
+  hint.style.display = hint.style.display === 'none' ? 'block' : 'none';
+}
+
+function clearAufgFeedback(idx) {
+  document.getElementById('aufg-feedback-' + idx).innerHTML = '';
+}
+
+function checkAufgabe(idx) {
+  const a = aufgabenData[idx];
+  const input = document.getElementById('aufg-input-' + idx);
+  const feedbackEl = document.getElementById('aufg-feedback-' + idx);
+  const val = parseFloat(input.value.replace(',', '.'));
+
+  if(isNaN(val)) {
+    feedbackEl.innerHTML = '<div class="feedback incorrect">Bitte gib eine Zahl ein.</div>';
+    return;
+  }
+
+  const isCorrect = Math.abs(val - a.answer) <= a.tolerance * Math.max(1, a.answer);
+
+  if(isCorrect) {
+    feedbackEl.innerHTML = `
+      <div class="feedback correct">
+        ✓ Richtig! ${val.toString().replace('.', ',')} ${a.unit}<br>
+        <details style="margin-top:8px;"><summary style="cursor:pointer;font-weight:500;">Lösungsweg anzeigen</summary>
+        <ol style="margin:8px 0 0 16px;padding:0;line-height:1.8;">
+          ${a.steps.map(s => '<li>' + s + '</li>').join('')}
+        </ol></details>
+      </div>`;
+    document.getElementById('aufg-check-' + idx).disabled = true;
+    input.disabled = true;
+  } else {
+    aufgabenAnswers[idx] = (aufgabenAnswers[idx] || 0) + 1;
+    const attempts = aufgabenAnswers[idx];
+    let extra = '';
+    if(attempts >= 2) {
+      extra = `<br><details style="margin-top:6px;"><summary style="cursor:pointer;font-weight:500;">Lösungsweg anzeigen</summary>
+        <ol style="margin:8px 0 0 16px;padding:0;line-height:1.8;">
+          ${a.steps.map(s => '<li>' + s + '</li>').join('')}
+        </ol></details>`;
+    }
+    feedbackEl.innerHTML = `<div class="feedback incorrect">✗ Leider falsch (Versuch ${attempts}). Versuche es nochmal!${extra}</div>`;
+  }
+}
+
 const quizData = [
   {
     question: "Welche Größe beschreibt die Geschwindigkeit eines Körpers am besten?",
@@ -430,11 +618,18 @@ function switchTab(tab) {
   if(tab === 'simulation') {
     document.querySelectorAll('.tab')[0].classList.add('active');
     document.getElementById('simulation-tab').classList.add('active');
-  } else {
+  } else if(tab === 'quiz') {
     document.querySelectorAll('.tab')[1].classList.add('active');
     document.getElementById('quiz-tab').classList.add('active');
     if(Object.keys(userAnswers).length === 0) {
       renderQuiz();
+    }
+  } else {
+    document.querySelectorAll('.tab')[2].classList.add('active');
+    document.getElementById('aufgaben-tab').classList.add('active');
+    if(!aufgabenRendered) {
+      renderAufgaben();
+      aufgabenRendered = true;
     }
   }
 }
@@ -572,6 +767,7 @@ function checkQuizCompletion() {
   let rafId = null;
   let lastT = 0;
   let timeInForce = 0;
+  let speedMultiplier = 1.0;
 
   function reset(){
     running = false;
@@ -888,21 +1084,22 @@ function checkQuizCompletion() {
   }
 
   function drawFormulas(){
+    const fBoxY = H - 88;
     ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-    ctx.fillRect(10, 10, 260, 90);
+    ctx.fillRect(10, fBoxY, 158, 76);
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
     ctx.lineWidth = 0.5;
-    ctx.strokeRect(10, 10, 260, 90);
+    ctx.strokeRect(10, fBoxY, 158, 76);
     
     ctx.fillStyle = '#2C2C2A';
     ctx.font = '500 13px sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText('Wichtige Formeln:', 20, 30);
+    ctx.fillText('Wichtige Formeln:', 20, fBoxY + 20);
     
     ctx.font = '12px sans-serif';
-    ctx.fillText('F · Δt = m · Δv', 20, 50);
-    ctx.fillText('v = s / t', 20, 68);
-    ctx.fillText('a = Δv / Δt', 20, 86);
+    ctx.fillText('F · Δt = m · Δv', 20, fBoxY + 40);
+    ctx.fillText('v = s / t', 20, fBoxY + 58);
+    ctx.fillText('a = Δv / Δt', 20, fBoxY + 76);
     
     if(inFoehn(state.y) || timeInForce > 0) {
       ctx.fillStyle = 'rgba(216, 90, 48, 0.1)';
@@ -1132,7 +1329,7 @@ function checkQuizCompletion() {
 
   function loop(t){
     if(!running) return;
-    const dt = Math.min(0.05, (t - lastT) / 1000);
+    const dt = Math.min(0.05, (t - lastT) / 1000) * speedMultiplier;
     lastT = t;
     step(dt);
     draw();
@@ -1153,6 +1350,22 @@ function checkQuizCompletion() {
 
   resetBtn.addEventListener('click', reset);
   screenshotBtn.addEventListener('click', takeScreenshot);
+
+  document.getElementById('speed100').addEventListener('click', function(){
+    speedMultiplier = 1.0;
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('speed-active'));
+    this.classList.add('speed-active');
+  });
+  document.getElementById('speed50').addEventListener('click', function(){
+    speedMultiplier = 0.5;
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('speed-active'));
+    this.classList.add('speed-active');
+  });
+  document.getElementById('speed25').addEventListener('click', function(){
+    speedMultiplier = 0.25;
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('speed-active'));
+    this.classList.add('speed-active');
+  });
 
   vIn.addEventListener('input', updateFromSlider(vIn, vText, vOut, 100, 2, 'm/s'));
   vText.addEventListener('change', updateFromText(vText, vIn, vOut, 100, 2, 'm/s', 0.1, 5));
