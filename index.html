@@ -1403,4 +1403,1422 @@ function checkQuizCompletion() {
     strobeInterval = val;
     const fmt = val.toFixed(2).replace('.', ',');
     strobeOut.textContent = fmt + ' s';
+    strobeText.value = fmt;
+    draw();
+  });
+
+  [showV, showVcomp, showF, showTrail, showStrobe].forEach(function(el){ el.addEventListener('change', draw); });
+
+  setInterval(function(){ if(!running) draw(); }, 80);
+
+  reset();
+})();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kraftpfeil verändert Geschwindigkeitspfeil – Simulation & Quiz</title> 
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: #f5f5f0;
+    color: #2C2C2A;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 500; margin: 0 0 20px; }
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 0.5px solid rgba(0,0,0,0.15);
+  }
+  .tab {
+    padding: 10px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 500;
+    color: #5F5E5A;
+    transition: all 0.2s;
+  }
+  .tab:hover { color: #2C2C2A; }
+  .tab.active {
+    color: #534AB7;
+    border-bottom-color: #534AB7;
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+  .canvas-wrap { background: #eceae3; border-radius: 12px; padding: 10px; position: relative; }
+  canvas { width: 100%; height: auto; display: block; border-radius: 8px; background: #ffffff; }
+  .controls {
+    display: flex; flex-direction: column; gap: 16px;
+    background: #ffffff;
+    border: 0.5px solid rgba(0,0,0,0.15);
+    border-radius: 12px; padding: 16px;
+  }
+  .btn-row { display: flex; gap: 8px; }
+  button {
+    flex: 1; padding: 8px 12px; font-size: 14px;
+    border: 0.5px solid rgba(0,0,0,0.3);
+    background: #ffffff; border-radius: 8px;
+    cursor: pointer; transition: background 0.15s;
+    font-family: inherit; color: inherit;
+  }
+  button:hover { background: #f1efe8; }
+  button:active { transform: scale(0.98); }
+  .screenshot-btn {
+    background: #534AB7;
+    color: white;
+    border-color: #534AB7;
+  }
+  .screenshot-btn:hover {
+    background: #3C3489;
+  }
+  .speed-btn { font-size: 13px; }
+  .speed-active {
+    background: #534AB7 !important;
+    color: white !important;
+    border-color: #534AB7 !important;
+  }
+  .slider-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .slider-group label {
+    display: flex; justify-content: space-between;
+    font-size: 13px; color: #5F5E5A;
+  }
+  .slider-group .value { font-weight: 500; color: #2C2C2A; }
+  .slider-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  input[type="range"] { 
+    flex: 1;
+    accent-color: #534AB7; 
+  }
+  .value-input {
+    width: 70px;
+    padding: 4px 8px;
+    border: 0.5px solid rgba(0,0,0,0.15);
+    border-radius: 6px;
+    font-size: 13px;
+    text-align: center;
+    font-family: inherit;
+  }
+  .value-input:focus {
+    outline: none;
+    border-color: #534AB7;
+  }
+  .checkbox-group {
+    border-top: 0.5px solid rgba(0,0,0,0.15);
+    padding-top: 12px;
+    display: flex; flex-direction: column; gap: 10px;
+    font-size: 13px;
+  }
+  .checkbox-group label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .checkbox-group input { width: 16px; height: 16px; accent-color: #534AB7; }
+  .arrow-sym { display: inline-block; font-weight: 600; font-size: 16px; }
+  .hint {
+    margin-top: 20px; padding: 14px 18px;
+    background: #ffffff;
+    border: 0.5px solid rgba(0,0,0,0.15);
+    border-radius: 12px;
+    font-size: 14px; line-height: 1.6; color: #444441;
+  }
+  .hint strong { font-weight: 500; color: #2C2C2A; }
+  
+  .quiz-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .question-card {
+    background: #ffffff;
+    border: 0.5px solid rgba(0,0,0,0.15);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .question-header {
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    color: #2C2C2A;
+  }
+  .question-type {
+    font-size: 12px;
+    color: #888780;
+    margin-bottom: 8px;
+  }
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .option {
+    padding: 12px 16px;
+    border: 0.5px solid rgba(0,0,0,0.15);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #ffffff;
+  }
+  .option:hover {
+    background: #f1efe8;
+    border-color: rgba(0,0,0,0.25);
+  }
+  .option.selected {
+    background: #EEEDFE;
+    border-color: #534AB7;
+    color: #534AB7;
+  }
+  .option.correct {
+    background: #EAF3DE;
+    border-color: #639922;
+    color: #27500A;
+  }
+  .option.incorrect {
+    background: #FCEBEB;
+    border-color: #E24B4A;
+    color: #791F1F;
+  }
+  .feedback {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .feedback.correct {
+    background: #EAF3DE;
+    color: #27500A;
+  }
+  .feedback.incorrect {
+    background: #FCEBEB;
+    color: #791F1F;
+  }
+  .check-btn {
+    margin-top: 12px;
+    padding: 10px 16px;
+    background: #534AB7;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .check-btn:hover {
+    background: #3C3489;
+  }
+  .check-btn:disabled {
+    background: #D3D1C7;
+    cursor: not-allowed;
+  }
+  .quiz-summary {
+    background: #ffffff;
+    border: 2px solid #534AB7;
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+  }
+  .score {
+    font-size: 32px;
+    font-weight: 500;
+    color: #534AB7;
+    margin: 16px 0;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Kraftpfeil verändert Geschwindigkeitspfeil</h1>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('simulation')">Simulation</button>
+    <button class="tab" onclick="switchTab('quiz')">Quiz</button>
+    <button class="tab" onclick="switchTab('aufgaben')">Rechenaufgaben</button>
+  </div>
+
+  <div id="simulation-tab" class="tab-content active">
+    <div class="layout">
+      <div class="canvas-wrap">
+        <canvas id="sim" width="720" height="540"></canvas>
+      </div>
+
+      <div class="controls">
+        <div class="btn-row">
+          <button id="startBtn">Start</button>
+          <button id="resetBtn">Reset</button>
+        </div>
+
+        <div class="btn-row" id="speedBtns">
+          <button id="speed100" class="speed-btn speed-active">1×</button>
+          <button id="speed50"  class="speed-btn">½×</button>
+          <button id="speed25"  class="speed-btn">¼×</button>
+        </div>
+
+        <button class="screenshot-btn" id="screenshotBtn">📸 Screenshot</button>
+
+        <div class="slider-group">
+          <label><span>Geschw. Kugel (v<sub>y</sub>)</span><span class="value" id="vOut">1,00 m/s</span></label>
+          <div class="slider-controls">
+            <input id="vIn" type="range" min="10" max="500" value="100" step="1">
+            <input id="vText" class="value-input" type="text" value="1,00">
+          </div>
+        </div>
+
+        <div class="slider-group">
+          <label><span>Kraft</span><span class="value" id="fOut">1,0 N</span></label>
+          <div class="slider-controls">
+            <input id="fIn" type="range" min="0" max="1000" value="100" step="5">
+            <input id="fText" class="value-input" type="text" value="1,0">
+          </div>
+        </div>
+
+        <div class="slider-group">
+          <label><span>Breite Kraftbereich</span><span class="value" id="wOut">0,10 m</span></label>
+          <div class="slider-controls">
+            <input id="wIn" type="range" min="20" max="500" value="100" step="5">
+            <input id="wText" class="value-input" type="text" value="0,10">
+          </div>
+        </div>
+
+        <div class="checkbox-group">
+          <label><input type="checkbox" id="showV" checked>
+            <span>Geschwindigkeit <span class="arrow-sym" style="color:#378ADD;">→</span></span>
+          </label>
+          <label style="margin-left:24px;"><input type="checkbox" id="showVcomp">
+            <span style="font-size:12px;">Komponenten v<sub>x</sub>, v<sub>y</sub></span>
+          </label>
+          <label><input type="checkbox" id="showF" checked>
+            <span>Kraft <span class="arrow-sym" style="color:#D85A30;">→</span></span>
+          </label>
+          <label><input type="checkbox" id="showTrail" checked><span>Bahnkurve</span></label>
+          <label><input type="checkbox" id="showStrobe"><span>Stroboskop</span></label>
+          <div style="margin-left:24px;" id="strobeIntervalGroup">
+            <div style="display:flex;justify-content:space-between;font-size:13px;color:#5F5E5A;margin-bottom:6px;">
+              <span>Intervall</span><span id="strobeOut" style="font-weight:500;color:#2C2C2A;">0,50 s</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input id="strobeIn" type="range" min="5" max="100" value="50" step="5" style="flex:1;accent-color:#534AB7;">
+              <input id="strobeText" class="value-input" type="text" value="0,50">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hint">
+      <strong>Bedienung:</strong> Mit „Start" die Kugel starten. Sie bewegt sich mit gleichbleibender Geschwindigkeit in y-Richtung (z.&nbsp;B. wie eine rollende Kugel auf einem Tisch). Sobald sie den blauen Kraftbereich durchquert, wirkt zusätzlich eine Kraft in x-Richtung. Die Schieberegler beeinflussen die Anfangsgeschwindigkeit der Kugel, die Stärke der Kraft und die Ausdehnung des Kraftbereichs in y-Richtung und damit die Einwirkzeit Δt.
+    </div>
+  </div>
+
+  <div id="quiz-tab" class="tab-content">
+    <div class="quiz-container" id="quiz-container"></div>
+  </div>
+
+  <div id="aufgaben-tab" class="tab-content">
+    <div class="quiz-container" id="aufgaben-container"></div>
+  </div>
+</div>
+
+<script>
+
+const aufgabenData = [
+  {
+    id: 0,
+    title: 'Aufgabe 1 – Geschwindigkeitsänderung berechnen',
+    text: 'Eine Kugel mit der Masse <strong>m = 2 kg</strong> wird für <strong>Δt = 3 s</strong> mit einer Kraft von <strong>F = 6 N</strong> horizontal beschleunigt. Berechne die Geschwindigkeitsänderung Δv.',
+    hint: 'Nutze: F · Δt = m · Δv → Δv = (F · Δt) / m',
+    formula: 'F · Δt = m · Δv',
+    answer: 9,
+    unit: 'm/s',
+    tolerance: 0.05,
+    steps: [
+      'Formel aufstellen: F · Δt = m · Δv',
+      'Umstellen: Δv = (F · Δt) / m',
+      'Einsetzen: Δv = (6 N · 3 s) / 2 kg',
+      'Ergebnis: Δv = 9 m/s'
+    ]
+  },
+  {
+    id: 1,
+    title: 'Aufgabe 2 – Kraft berechnen',
+    text: 'Eine Kugel (m = <strong>0,5 kg</strong>) erfährt in <strong>Δt = 2 s</strong> eine Geschwindigkeitsänderung von <strong>Δv = 8 m/s</strong>. Wie groß ist die wirkende Kraft F?',
+    hint: 'Nutze: F · Δt = m · Δv → F = (m · Δv) / Δt',
+    formula: 'F · Δt = m · Δv',
+    answer: 2,
+    unit: 'N',
+    tolerance: 0.05,
+    steps: [
+      'Formel aufstellen: F · Δt = m · Δv',
+      'Umstellen: F = (m · Δv) / Δt',
+      'Einsetzen: F = (0,5 kg · 8 m/s) / 2 s',
+      'Ergebnis: F = 2 N'
+    ]
+  },
+  {
+    id: 2,
+    title: 'Aufgabe 3 – Einwirkzeit berechnen',
+    text: 'Auf eine Kugel (m = <strong>1 kg</strong>) wirkt eine Kraft von <strong>F = 4 N</strong>. Die Geschwindigkeit soll um <strong>Δv = 6 m/s</strong> zunehmen. Wie lange muss die Kraft wirken?',
+    hint: 'Nutze: F · Δt = m · Δv → Δt = (m · Δv) / F',
+    formula: 'F · Δt = m · Δv',
+    answer: 1.5,
+    unit: 's',
+    tolerance: 0.05,
+    steps: [
+      'Formel aufstellen: F · Δt = m · Δv',
+      'Umstellen: Δt = (m · Δv) / F',
+      'Einsetzen: Δt = (1 kg · 6 m/s) / 4 N',
+      'Ergebnis: Δt = 1,5 s'
+    ]
+  },
+  {
+    id: 3,
+    title: 'Aufgabe 4 – Beschleunigung berechnen',
+    text: 'Eine Kugel ändert ihre Geschwindigkeit in <strong>Δt = 4 s</strong> um <strong>Δv = 12 m/s</strong>. Berechne die Beschleunigung a.',
+    hint: 'Nutze: a = Δv / Δt',
+    formula: 'a = Δv / Δt',
+    answer: 3,
+    unit: 'm/s²',
+    tolerance: 0.05,
+    steps: [
+      'Formel: a = Δv / Δt',
+      'Einsetzen: a = 12 m/s / 4 s',
+      'Ergebnis: a = 3 m/s²'
+    ]
+  },
+  {
+    id: 4,
+    title: 'Aufgabe 5 – Kraft über Newton',
+    text: 'Eine Kugel (m = <strong>3 kg</strong>) wird mit <strong>a = 5 m/s²</strong> beschleunigt. Wie groß ist die Kraft F?',
+    hint: 'Nutze: F = m · a',
+    formula: 'F = m · a',
+    answer: 15,
+    unit: 'N',
+    tolerance: 0.05,
+    steps: [
+      'Formel: F = m · a',
+      'Einsetzen: F = 3 kg · 5 m/s²',
+      'Ergebnis: F = 15 N'
+    ]
+  },
+  {
+    id: 5,
+    title: 'Aufgabe 6 – Verbundaufgabe (Simulation nachrechnen)',
+    text: 'In der Simulation bewegt sich eine Kugel (m = <strong>1 kg</strong>) mit v<sub>y</sub> = <strong>2 m/s</strong> durch einen Kraftbereich der Ausdehnung <strong>h = 0,20 m</strong> in y-Richtung. Die horizontale Kraft beträgt <strong>F = 5 N</strong>. Berechne die horizontale Geschwindigkeit v<sub>x</sub>, die die Kugel nach dem Kraftbereich hat.',
+    hint: 'Zuerst Einwirkzeit aus Δt = h / v berechnen, dann Δv = (F · Δt) / m',
+    formula: 'Δt = h / v,  Δv = (F · Δt) / m',
+    answer: 0.5,
+    unit: 'm/s',
+    tolerance: 0.02,
+    steps: [
+      'Einwirkzeit: Δt = h / v_y = 0,20 m / 2 m/s = 0,1 s',
+      'Geschwindigkeitsänderung: Δv = (F · Δt) / m = (5 N · 0,1 s) / 1 kg',
+      'Da v_x vorher = 0: v_x = Δv = 0,5 m/s'
+    ]
+  }
+];
+
+let aufgabenRendered = false;
+let aufgabenAnswers = {};
+
+function renderAufgaben() {
+  const container = document.getElementById('aufgaben-container');
+  container.innerHTML = '';
+
+  aufgabenData.forEach((a, idx) => {
+    const card = document.createElement('div');
+    card.className = 'question-card';
+    card.innerHTML = `
+      <div class="question-type">Aufgabe ${idx + 1} von ${aufgabenData.length}</div>
+      <div class="question-header">${a.title}</div>
+      <div style="font-size:14px;line-height:1.7;color:#444441;margin-bottom:16px;">${a.text}</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <input type="text" id="aufg-input-${idx}" class="value-input" style="width:110px;font-size:15px;padding:6px 10px;" placeholder="Antwort" oninput="clearAufgFeedback(${idx})">
+        <span style="font-size:14px;color:#5F5E5A;">${a.unit}</span>
+        <button class="check-btn" onclick="checkAufgabe(${idx})" id="aufg-check-${idx}" style="flex:0 0 auto;width:auto;padding:8px 18px;">Prüfen</button>
+        <button onclick="toggleHint(${idx})" style="flex:0 0 auto;width:auto;padding:8px 14px;font-size:13px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:#fff;cursor:pointer;color:#5F5E5A;">💡 Tipp</button>
+      </div>
+      <div id="aufg-hint-${idx}" style="display:none;background:#FFFBEA;border:0.5px solid #E8C84A;border-radius:8px;padding:10px 14px;font-size:13px;color:#665A00;margin-bottom:8px;">
+        <div style="margin-bottom:6px;font-family:monospace;background:rgba(0,0,0,0.06);display:inline-block;padding:2px 8px;border-radius:4px;">${a.formula}</div>
+      </div>
+      <div id="aufg-feedback-${idx}"></div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function toggleHint(idx) {
+  const hint = document.getElementById('aufg-hint-' + idx);
+  const attempts = aufgabenAnswers[idx] || 0;
+  if(attempts === 0) {
+    // Noch kein Fehlversuch: nur Formel zeigen, Hinweistext versteckt
+    hint.style.display = hint.style.display === 'none' ? 'block' : 'none';
+  } else {
+    hint.style.display = hint.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
+function clearAufgFeedback(idx) {
+  document.getElementById('aufg-feedback-' + idx).innerHTML = '';
+}
+
+function checkAufgabe(idx) {
+  const a = aufgabenData[idx];
+  const input = document.getElementById('aufg-input-' + idx);
+  const feedbackEl = document.getElementById('aufg-feedback-' + idx);
+  const val = parseFloat(input.value.replace(',', '.'));
+
+  if(isNaN(val)) {
+    feedbackEl.innerHTML = '<div class="feedback incorrect">Bitte gib eine Zahl ein.</div>';
+    return;
+  }
+
+  const isCorrect = Math.abs(val - a.answer) <= a.tolerance * Math.max(1, a.answer);
+
+  if(isCorrect) {
+    feedbackEl.innerHTML = `
+      <div class="feedback correct">
+        ✓ Richtig! ${val.toString().replace('.', ',')} ${a.unit}<br>
+        <details style="margin-top:8px;"><summary style="cursor:pointer;font-weight:500;">Lösungsweg anzeigen</summary>
+        <ol style="margin:8px 0 0 16px;padding:0;line-height:1.8;">
+          ${a.steps.map(s => '<li>' + s + '</li>').join('')}
+        </ol></details>
+      </div>`;
+    document.getElementById('aufg-check-' + idx).disabled = true;
+    input.disabled = true;
+  } else {
+    aufgabenAnswers[idx] = (aufgabenAnswers[idx] || 0) + 1;
+    const attempts = aufgabenAnswers[idx];
+    // Nach erstem Fehlversuch: Tipp-Inhalt vollständig anzeigen
+    if(attempts === 1) {
+      const hintEl = document.getElementById('aufg-hint-' + idx);
+      hintEl.innerHTML = `<div style="margin-bottom:6px;font-family:monospace;background:rgba(0,0,0,0.06);display:inline-block;padding:2px 8px;border-radius:4px;">${a.formula}</div><br>${a.hint}`;
+    }
+    feedbackEl.innerHTML = `<div class="feedback incorrect">✗ Leider falsch. Versuche es nochmal!</div>`;
+  }
+}
+
+const quizData = [
+  {
+    question: "Welche Größe beschreibt die Geschwindigkeit eines Körpers am besten?",
+    type: "multiple-choice",
+    options: [
+      "Ein Zahlenwert ohne Richtung (z.B. '50')",
+      "Ein Pfeil mit Betrag und Richtung",
+      "Nur die Bewegungsrichtung",
+      "Die zurückgelegte Strecke"
+    ],
+    correct: 1,
+    feedbackCorrect: "Richtig! Die Geschwindigkeit ist eine vektorielle Größe und wird durch einen Pfeil dargestellt. Der Pfeil zeigt die Bewegungsrichtung und seine Länge gibt den Betrag (das Tempo) an.",
+    feedbackIncorrect: "Nicht ganz. Die Geschwindigkeit ist eine vektorielle Größe – sie wird durch einen Pfeil dargestellt. Der Pfeil zeigt die Bewegungsrichtung und seine Länge gibt den Betrag (das Tempo) an.",
+    competence: "kennzeichnen in Stroboskopdarstellungen die Geschwindigkeit durch Pfeile"
+  },
+  {
+    question: "In der Simulation bewegt sich die Kugel zunächst nur in y-Richtung (gleichmäßig, wie auf einem Tisch). Was passiert mit v<sub>y</sub>, wenn die horizontale Kraft in x-Richtung wirkt?",
+    type: "multiple-choice",
+    options: [
+      "v<sub>y</sub> wird größer",
+      "v<sub>y</sub> wird kleiner",
+      "v<sub>y</sub> bleibt konstant",
+      "v<sub>y</sub> wird zu null"
+    ],
+    correct: 2,
+    feedbackCorrect: "Genau! Die Kraft wirkt nur in x-Richtung. Deshalb ändert sich nur v<sub>x</sub>, während v<sub>y</sub> konstant bleibt. Das ist ein zentrales Prinzip der zweidimensionalen Bewegung.",
+    feedbackIncorrect: "Leider falsch. Die Kraft wirkt nur in x-Richtung. Deshalb ändert sich nur v<sub>x</sub>, während v<sub>y</sub> konstant bleibt. Das ist ein zentrales Prinzip der zweidimensionalen Bewegung.",
+    competence: "bestimmen zeichnerisch die Geschwindigkeitsänderung"
+  },
+  {
+    question: "Je größer die Kraft, desto ...",
+    type: "multiple-choice",
+    options: [
+      "... größer die Geschwindigkeitsänderung Δv",
+      "... kleiner die Geschwindigkeitsänderung Δv",
+      "... schneller wird die Kugel insgesamt",
+      "... länger dauert die Bewegung"
+    ],
+    correct: 0,
+    feedbackCorrect: "Richtig! Je größer die Kraft (oder je länger die Einwirkzeit Δt), desto größer ist die Geschwindigkeitsänderung Δv. Das zeigt das zweite Newton'sche Gesetz: F·Δt = m·Δv",
+    feedbackIncorrect: "Nicht korrekt. Je größer die Kraft (oder je länger die Einwirkzeit Δt), desto größer ist die Geschwindigkeitsänderung Δv. Das zeigt das zweite Newton'sche Gesetz: F·Δt = m·Δv",
+    competence: "beschreiben Größenabhängigkeiten mit Je-desto-Aussagen"
+  },
+  {
+    question: "Welche physikalische Gleichung beschreibt den Zusammenhang zwischen Kraft, Einwirkzeit und Geschwindigkeitsänderung?",
+    type: "multiple-choice",
+    options: [
+      "F = m · a",
+      "F · Δt = m · Δv",
+      "v = s / t",
+      "E = m · c²"
+    ],
+    correct: 1,
+    feedbackCorrect: "Exakt! F·Δt = m·Δv ist das zweite Newton'sche Gesetz in der Form für Geschwindigkeitsänderungen. Es zeigt: Eine Kraft über eine bestimmte Zeit führt zu einer Änderung der Geschwindigkeit.",
+    feedbackIncorrect: "Das ist nicht die richtige Formel. F·Δt = m·Δv ist das zweite Newton'sche Gesetz in der Form für Geschwindigkeitsänderungen. Es zeigt: Eine Kraft über eine bestimmte Zeit führt zu einer Änderung der Geschwindigkeit.",
+    competence: "machen das zweite Newton'sche Gesetz plausibel"
+  },
+  {
+    question: "Schau dir die Simulation mit Stroboskop an. Wie kannst du Δv (die Geschwindigkeitsänderung) zwischen zwei Punkten zeichnerisch bestimmen?",
+    type: "multiple-choice",
+    options: [
+      "Die beiden Geschwindigkeitspfeile addieren",
+      "Den zweiten Pfeil vom ersten abziehen (v<sub>2</sub> - v<sub>1</sub>)",
+      "Den Mittelwert beider Pfeile bilden",
+      "Die Pfeillängen multiplizieren"
+    ],
+    correct: 1,
+    feedbackCorrect: "Sehr gut! Δv = v<sub>2</sub> - v<sub>1</sub>. Zeichnerisch: Verschiebe v<sub>1</sub> so, dass beide Pfeile am gleichen Punkt starten. Der Pfeil von der Spitze von v<sub>1</sub> zur Spitze von v<sub>2</sub> ist Δv.",
+    feedbackIncorrect: "Das stimmt so nicht. Δv = v<sub>2</sub> - v<sub>1</sub>. Zeichnerisch: Verschiebe v<sub>1</sub> so, dass beide Pfeile am gleichen Punkt starten. Der Pfeil von der Spitze von v<sub>1</sub> zur Spitze von v<sub>2</sub> ist Δv.",
+    competence: "bestimmen zeichnerisch die Geschwindigkeitsänderung"
+  },
+  {
+    question: "In der Simulation kannst du die Einwirkzeit Δt durch die Breite des Kraftbereichs verändern. Was beobachtest du, wenn du die Breite verdoppelst (bei gleicher Kraft)?",
+    type: "multiple-choice",
+    options: [
+      "Die Ablenkung wird halb so groß",
+      "Die Ablenkung bleibt gleich",
+      "Die Ablenkung wird doppelt so groß",
+      "Die Kugel stoppt"
+    ],
+    correct: 2,
+    feedbackCorrect: "Richtig! Je länger die Kraft wirkt (doppelte Höhe = doppelte Zeit im Kraftbereich), desto größer wird Δv. Das zeigt F·Δt = m·Δv: Doppelte Zeit → doppelte Geschwindigkeitsänderung.",
+    feedbackIncorrect: "Falsch. Je länger die Kraft wirkt (doppelte Höhe = doppelte Zeit im Kraftbereich), desto größer wird Δv. Das zeigt F·Δt = m·Δv: Doppelte Zeit → doppelte Geschwindigkeitsänderung.",
+    competence: "analysieren Geschwindigkeitsänderungen und nutzen F·Δt = m·Δv"
+  },
+  {
+    question: "Beispiel Straßenverkehr: Ein Auto fährt mit 50 km/h geradeaus. Plötzlich tritt der Fahrer auf die Bremse. In welche Richtung zeigt die Kraft?",
+    type: "multiple-choice",
+    options: [
+      "In Fahrtrichtung (nach vorne)",
+      "Entgegen der Fahrtrichtung (nach hinten)",
+      "Senkrecht zur Fahrtrichtung",
+      "Die Kraft zeigt nach unten"
+    ],
+    correct: 1,
+    feedbackCorrect: "Genau! Die Bremskraft wirkt entgegen der Bewegungsrichtung. Dadurch wird die Geschwindigkeit kleiner – das Auto bremst ab. Die Kraft zeigt immer in Richtung der Geschwindigkeitsänderung Δv.",
+    feedbackIncorrect: "Leider nein. Die Bremskraft wirkt entgegen der Bewegungsrichtung. Dadurch wird die Geschwindigkeit kleiner – das Auto bremst ab. Die Kraft zeigt immer in Richtung der Geschwindigkeitsänderung Δv.",
+    competence: "argumentieren in alltagsrelevanten Kontexten"
+  },
+  {
+    question: "Was ist der Unterschied zwischen Geschwindigkeit und Beschleunigung?",
+    type: "multiple-choice",
+    options: [
+      "Geschwindigkeit beschreibt die Bewegung, Beschleunigung die Geschwindigkeitsänderung pro Zeit",
+      "Beides ist dasselbe",
+      "Beschleunigung ist immer größer als Geschwindigkeit",
+      "Geschwindigkeit gilt nur für Autos, Beschleunigung nur für Raketen"
+    ],
+    correct: 0,
+    feedbackCorrect: "Perfekt! Geschwindigkeit v beschreibt, wie schnell und in welche Richtung sich ein Körper bewegt. Beschleunigung a = Δv/Δt beschreibt, wie schnell sich die Geschwindigkeit ändert.",
+    feedbackIncorrect: "Das ist nicht richtig. Geschwindigkeit v beschreibt, wie schnell und in welche Richtung sich ein Körper bewegt. Beschleunigung a = Δv/Δt beschreibt, wie schnell sich die Geschwindigkeit ändert.",
+    competence: "nutzen das zweite Newton'sche Gesetz und die Beschleunigung"
+  }
+];
+
+let userAnswers = {};
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  
+  if(tab === 'simulation') {
+    document.querySelectorAll('.tab')[0].classList.add('active');
+    document.getElementById('simulation-tab').classList.add('active');
+  } else if(tab === 'quiz') {
+    document.querySelectorAll('.tab')[1].classList.add('active');
+    document.getElementById('quiz-tab').classList.add('active');
+    if(Object.keys(userAnswers).length === 0) {
+      renderQuiz();
+    }
+  } else {
+    document.querySelectorAll('.tab')[2].classList.add('active');
+    document.getElementById('aufgaben-tab').classList.add('active');
+    if(!aufgabenRendered) {
+      renderAufgaben();
+      aufgabenRendered = true;
+    }
+  }
+}
+
+function renderQuiz() {
+  const container = document.getElementById('quiz-container');
+  container.innerHTML = '';
+  
+  quizData.forEach((q, idx) => {
+    const card = document.createElement('div');
+    card.className = 'question-card';
+    card.innerHTML = `
+      <div class="question-type">Frage ${idx + 1} von ${quizData.length}</div>
+      <div class="question-header">${q.question}</div>
+      ${renderMultipleChoice(q, idx)}
+    `;
+    container.appendChild(card);
+  });
+  
+  const summary = document.createElement('div');
+  summary.id = 'quiz-summary';
+  summary.style.display = 'none';
+  container.appendChild(summary);
+}
+
+function renderMultipleChoice(q, idx) {
+  return `
+    <div class="options">
+      ${q.options.map((opt, i) => `
+        <div class="option" onclick="selectOption(${idx}, ${i})" id="opt-${idx}-${i}">
+          ${opt}
+        </div>
+      `).join('')}
+    </div>
+    <button class="check-btn" onclick="checkAnswer(${idx})" id="check-${idx}">Antwort prüfen</button>
+    <div id="feedback-${idx}"></div>
+  `;
+}
+
+function selectOption(qIdx, optIdx) {
+  const q = quizData[qIdx];
+  q.options.forEach((_, i) => {
+    const el = document.getElementById(`opt-${qIdx}-${i}`);
+    if(el) el.classList.remove('selected');
+  });
+  document.getElementById(`opt-${qIdx}-${optIdx}`).classList.add('selected');
+  userAnswers[qIdx] = optIdx;
+}
+
+function checkAnswer(qIdx) {
+  const q = quizData[qIdx];
+  const feedbackEl = document.getElementById(`feedback-${qIdx}`);
+  const checkBtn = document.getElementById(`check-${qIdx}`);
+  
+  const selected = userAnswers[qIdx];
+  if(selected === undefined) {
+    alert('Bitte wähle zuerst eine Antwort aus.');
+    return;
+  }
+  
+  const isCorrect = selected === q.correct;
+  
+  q.options.forEach((_, i) => {
+    const el = document.getElementById(`opt-${qIdx}-${i}`);
+    el.style.pointerEvents = 'none';
+    if(i === q.correct) {
+      el.classList.add('correct');
+    } else if(i === selected && !isCorrect) {
+      el.classList.add('incorrect');
+    }
+  });
+  
+  const feedbackText = isCorrect ? q.feedbackCorrect : q.feedbackIncorrect;
+  feedbackEl.innerHTML = `<div class="feedback ${isCorrect ? 'correct' : 'incorrect'}">${feedbackText}</div>`;
+  checkBtn.disabled = true;
+  
+  checkQuizCompletion();
+}
+
+function checkQuizCompletion() {
+  const allChecked = Array.from(document.querySelectorAll('.check-btn')).every(btn => btn.disabled);
+  
+  if(allChecked) {
+    let correct = 0;
+    quizData.forEach((q, idx) => {
+      if(userAnswers[idx] === q.correct) {
+        correct++;
+      }
+    });
+    
+    const percent = Math.round((correct / quizData.length) * 100);
+    const summary = document.getElementById('quiz-summary');
+    summary.innerHTML = `
+      <div class="quiz-summary">
+        <h2>Quiz abgeschlossen!</h2>
+        <div class="score">${correct} von ${quizData.length} richtig</div>
+        <p>${percent}% der Fragen korrekt beantwortet</p>
+        <p style="margin-top:16px;color:#5F5E5A;">Du hast alle Kompetenzen aus dem Lehrplan Ph8 3.1 bearbeitet!</p>
+      </div>
+    `;
+    summary.style.display = 'block';
+  }
+}
+
+// Simulation code
+(function(){
+  const cv = document.getElementById('sim');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+
+  const vIn = document.getElementById('vIn');
+  const vText = document.getElementById('vText');
+  const fIn = document.getElementById('fIn');
+  const fText = document.getElementById('fText');
+  const wIn = document.getElementById('wIn');
+  const wText = document.getElementById('wText');
+  const vOut = document.getElementById('vOut');
+  const fOut = document.getElementById('fOut');
+  const wOut = document.getElementById('wOut');
+  const showV = document.getElementById('showV');
+  const showVcomp = document.getElementById('showVcomp');
+  const showF = document.getElementById('showF');
+  const showTrail = document.getElementById('showTrail');
+  const showStrobe = document.getElementById('showStrobe');
+  const strobeIn = document.getElementById('strobeIn');
+  const strobeText = document.getElementById('strobeText');
+  const strobeOut = document.getElementById('strobeOut');
+  let strobeInterval = 0.50;
+  const startBtn = document.getElementById('startBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const screenshotBtn = document.getElementById('screenshotBtn');
+
+  let state = null;
+  let running = false;
+  let rafId = null;
+  let lastT = 0;
+  let timeInForce = 0;
+  let speedMultiplier = 1.0;
+
+  function reset(){
+    running = false;
+    if(rafId) cancelAnimationFrame(rafId);
+    state = {
+      x: W*0.2,
+      y: 40,
+      vx: 0,
+      vy: parseFloat(vIn.value),
+      mass: 1,
+      trail: [],
+      strobe: [],
+      strobeTimer: 0,
+      time: 0
+    };
+    timeInForce = 0;
+    startBtn.textContent = 'Start';
+    draw();
+  }
+
+  function foehnRect(){
+    const h = parseFloat(wIn.value);
+    const oy = 40;  // Ursprung y
+    const SCALE = 100;  // px pro Meter
+    const cy = oy + 2.5 * SCALE;  // Föhn-Mitte bei y = 2,5 m
+    return { x: 0, y: cy - h/2, w: W, h: h };
+  }
+
+  function inFoehn(y){
+    const r = foehnRect();
+    return y >= r.y && y <= r.y + r.h;
+  }
+
+  function step(dt){
+    const F = parseFloat(fIn.value);
+    const ax = inFoehn(state.y) ? F / state.mass : 0;
+    
+    if(inFoehn(state.y)) {
+      timeInForce += dt;
+    }
+    
+    state.vx += ax * dt;
+    state.x += state.vx * dt;
+    state.y += state.vy * dt;
+    state.time += dt;
+
+    state.trail.push({x: state.x, y: state.y});
+    if(state.trail.length > 400) state.trail.shift();
+
+    state.strobeTimer += dt;
+    if(state.strobeTimer >= strobeInterval){
+      state.strobeTimer = 0;
+      state.strobe.push({x: state.x, y: state.y, vx: state.vx, vy: state.vy, inF: inFoehn(state.y)});
+    }
+
+    if(state.y > H + 20 || state.x > W + 20 || state.x < -20){
+      running = false;
+      startBtn.textContent = 'Start';
+    }
+  }
+
+  function arrow(x1, y1, x2, y2, color, width){
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.hypot(dx, dy);
+    if(len < 2) return;
+    const head = Math.min(12, len * 0.4);
+    const ang = Math.atan2(dy, dx);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - head * Math.cos(ang - 0.4), y2 - head * Math.sin(ang - 0.4));
+    ctx.lineTo(x2 - head * Math.cos(ang + 0.4), y2 - head * Math.sin(ang + 0.4));
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawFoehn(){
+    const r = foehnRect();
+    const F = parseFloat(fIn.value);
+
+    ctx.fillStyle = 'rgba(55, 138, 221, 0.08)';
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+
+    ctx.strokeStyle = 'rgba(55, 138, 221, 0.35)';
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.moveTo(0, r.y); ctx.lineTo(W, r.y);
+    ctx.moveTo(0, r.y + r.h); ctx.lineTo(W, r.y + r.h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const streamCount = Math.max(3, Math.floor(r.h / 20));
+    const intensity = F / 1000;
+    ctx.strokeStyle = 'rgba(55, 138, 221, ' + (0.3 + intensity * 0.35) + ')';
+    ctx.lineWidth = 1;
+    for(let i = 0; i < streamCount; i++){
+      const y = r.y + (i + 0.5) * r.h / streamCount;
+      const off = (Date.now() / 15 + i * 30) % 50;
+      ctx.beginPath();
+      for(let x = 80; x < W; x += 4){
+        const wave = Math.sin((x - off) * 0.08 + i) * 2.5;
+        if(x === 80) ctx.moveTo(x, y + wave);
+        else ctx.lineTo(x, y + wave);
+      }
+      ctx.stroke();
+    }
+
+    const SCALE = 100;  // px pro Meter
+    const oy = 40;  // Ursprung y
+    const fx = 30;
+    const fy = oy + 2.5 * SCALE;  // Föhn bei y = 2,5 m
+    
+    ctx.fillStyle = '#2C2C2A';
+    ctx.fillRect(fx - 20, fy - 20, 40, 40);
+    
+    ctx.fillStyle = '#888780';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Föhn', fx, fy + 45);
+  }
+
+
+  // ─── Koordinatensystem ─────────────────────────────────────────────────────
+  // Physikalischer Maßstab: 1 m = 100 px (Canvas-Pixel)
+  // Startpunkt der Kugel: x0 = W*0.2, y0 = 40  → das ist der Ursprung (0,0)
+  const SCALE = 100; // px pro Meter
+
+  function worldToCanvas(wx, wy) {
+    return { cx: W * 0.2 + wx * SCALE, cy: 40 + wy * SCALE };
+  }
+
+  function drawCoordinateSystem() {
+    const ox = W * 0.2;  // Ursprung x (Canvas)
+    const oy = 40;       // Ursprung y (Canvas)
+
+    // Gitterlinien
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+    ctx.lineWidth = 0.8;
+    ctx.setLineDash([4, 6]);
+    // vertikale Linien alle 0.5 m
+    for (let wx = -0.5; ox + wx * SCALE > 0; wx -= 0.5) {
+      const cx = ox + wx * SCALE;
+      ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+    }
+    for (let wx = 0.5; ox + wx * SCALE < W; wx += 0.5) {
+      const cx = ox + wx * SCALE;
+      ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+    }
+    // horizontale Linien alle 0.5 m
+    for (let wy = 0.5; oy + wy * SCALE < H; wy += 0.5) {
+      const cy = oy + wy * SCALE;
+      ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // Achsen
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillStyle   = 'rgba(0,0,0,0.55)';
+    ctx.lineWidth = 1.5;
+
+    // y-Achse (nach unten)
+    const yEnd = Math.min(H - 12, oy + 5 * SCALE);
+    ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, yEnd); ctx.stroke();
+    // Pfeilspitze y
+    ctx.beginPath();
+    ctx.moveTo(ox, yEnd);
+    ctx.lineTo(ox - 4, yEnd - 8);
+    ctx.lineTo(ox + 4, yEnd - 8);
+    ctx.closePath(); ctx.fill();
+
+    // Ursprungs-Label entfernt
+
+    // Tick-Marks und Beschriftungen
+    ctx.font = '10px sans-serif';
+    ctx.fillStyle = '#5F5E5A';
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+
+    // x-Ticks jeden Meter (und 0.5 m kleiner)
+    for (let wx = 0.5; ox + wx * SCALE < W - 15; wx += 0.5) {
+      const cx = ox + wx * SCALE;
+      const isMajor = (Math.round(wx * 10) % 10 === 0);
+      const tickH = isMajor ? 6 : 3;
+      ctx.beginPath(); ctx.moveTo(cx, oy - tickH); ctx.lineTo(cx, oy + tickH); ctx.stroke();
+      if (isMajor) {
+        ctx.textAlign = 'center';
+        ctx.fillText(wx.toFixed(0), cx, oy + 16);
+      }
+    }
+    // y-Ticks jeden Meter (und 0.5 m kleiner)
+    for (let wy = 0.5; oy + wy * SCALE < H - 15; wy += 0.5) {
+      const cy = oy + wy * SCALE;
+      const isMajor = (Math.round(wy * 10) % 10 === 0);
+      const tickW = isMajor ? 6 : 3;
+      ctx.beginPath(); ctx.moveTo(ox - tickW, cy); ctx.lineTo(ox + tickW, cy); ctx.stroke();
+      if (isMajor) {
+        ctx.textAlign = 'right';
+        ctx.fillText(wy.toFixed(0), ox - 9, cy + 3);
+      }
+    }
+
+    // Maßstabsbalken unten rechts
+    // Positioniert zwischen 2 Gitterpunkten
+    const barX = ox + 0.5 * SCALE;  // Bei x = 0,5 m
+    const barY = H - 18;
+    const barLen = SCALE; // 1 m
+    ctx.strokeStyle = '#2C2C2A';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'butt';
+    ctx.beginPath();
+    ctx.moveTo(barX, barY); ctx.lineTo(barX + barLen, barY); ctx.stroke();
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(barX, barY - 4); ctx.lineTo(barX, barY + 4); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(barX + barLen, barY - 4); ctx.lineTo(barX + barLen, barY + 4); ctx.stroke();
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillStyle = '#2C2C2A';
+    ctx.textAlign = 'center';
+    ctx.fillText('1 m', barX + barLen / 2, barY - 6);
+
+    ctx.restore();
+  }
+
+  // ─── Legende ───────────────────────────────────────────────────────────────
+  function drawLegend() {
+    const lx = W - 185;
+    const ly = 68;
+    const lw = 175;
+    const items = [];
+    items.push({ color: '#534AB7', label: 'Kugel (Masse m = 1 kg)', type: 'circle' });
+    if (showV.checked)    items.push({ color: '#378ADD', label: 'Geschwindigkeit v', type: 'arrow' });
+    if (showVcomp.checked) items.push({ color: '#85B7EB', label: 'Komponenten vₓ, vᵧ', type: 'arrow' });
+    if (showF.checked)    items.push({ color: '#D85A30', label: 'Kraft F', type: 'arrow' });
+    if (showTrail.checked) items.push({ color: 'rgba(136,135,128,0.7)', label: 'Bahnkurve', type: 'line' });
+    if (showStrobe.checked) items.push({ color: 'rgba(95,94,90,0.7)', label: 'Stroboskop-Punkte', type: 'circle-sm' });
+
+    const lh = 14 + items.length * 18 + 6;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.93)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+    ctx.lineWidth = 0.5;
+    // Runde Ecken
+    const r = 6;
+    ctx.beginPath();
+    ctx.moveTo(lx + r, ly);
+    ctx.lineTo(lx + lw - r, ly);
+    ctx.quadraticCurveTo(lx + lw, ly, lx + lw, ly + r);
+    ctx.lineTo(lx + lw, ly + lh - r);
+    ctx.quadraticCurveTo(lx + lw, ly + lh, lx + lw - r, ly + lh);
+    ctx.lineTo(lx + r, ly + lh);
+    ctx.quadraticCurveTo(lx, ly + lh, lx, ly + lh - r);
+    ctx.lineTo(lx, ly + r);
+    ctx.quadraticCurveTo(lx, ly, lx + r, ly);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    ctx.font = '500 12px sans-serif';
+    ctx.fillStyle = '#2C2C2A';
+    ctx.textAlign = 'left';
+    ctx.fillText('Legende', lx + 10, ly + 14);
+
+    items.forEach(function(item, i) {
+      const iy = ly + 24 + i * 18;
+      const ix = lx + 10;
+      ctx.strokeStyle = item.color;
+      ctx.fillStyle = item.color;
+      if (item.type === 'circle') {
+        ctx.beginPath();
+        ctx.arc(ix + 7, iy + 4, 6, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (item.type === 'circle-sm') {
+        ctx.beginPath();
+        ctx.arc(ix + 7, iy + 4, 4, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (item.type === 'arrow') {
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(ix + 2, iy + 4);
+        ctx.lineTo(ix + 14, iy + 4);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(ix + 14, iy + 4);
+        ctx.lineTo(ix + 9, iy + 1);
+        ctx.lineTo(ix + 9, iy + 7);
+        ctx.closePath(); ctx.fill();
+      } else if (item.type === 'line') {
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(ix + 2, iy + 4);
+        ctx.lineTo(ix + 14, iy + 4);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      ctx.font = '11px sans-serif';
+      ctx.fillStyle = '#2C2C2A';
+      ctx.textAlign = 'left';
+      ctx.fillText(item.label, ix + 20, iy + 8);
+    });
+
+    ctx.restore();
+  }
+
+  function drawFormulas(){
+    const fBoxY = H - 88;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.fillRect(10, fBoxY, 158, 76);
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(10, fBoxY, 158, 76);
+    
+    ctx.fillStyle = '#2C2C2A';
+    ctx.font = '500 13px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Wichtige Formeln:', 20, fBoxY + 20);
+    
+    ctx.font = '12px sans-serif';
+    ctx.fillText('F · Δt = m · Δv', 20, fBoxY + 40);
+    ctx.fillText('v = s / t', 20, fBoxY + 58);
+    ctx.fillText('a = Δv / Δt', 20, fBoxY + 76);
+    
+    if(inFoehn(state.y) || timeInForce > 0) {
+      ctx.fillStyle = 'rgba(216, 90, 48, 0.1)';
+      ctx.fillRect(280, 10, 160, 50);
+      ctx.strokeStyle = '#D85A30';
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(280, 10, 160, 50);
+      
+      ctx.fillStyle = '#993C1D';
+      ctx.font = '500 12px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('Einwirkzeit:', 290, 30);
+      ctx.font = '500 14px sans-serif';
+      ctx.fillText('Δt = ' + timeInForce.toFixed(2) + ' s', 290, 48);
+    }
+    
+    if(showStrobe.checked) {
+      ctx.fillStyle = 'rgba(95, 94, 90, 0.08)';
+      ctx.fillRect(450, 10, 200, 35);
+      ctx.strokeStyle = 'rgba(95, 94, 90, 0.4)';
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(450, 10, 200, 35);
+      ctx.fillStyle = '#5F5E5A';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('Stroboskop-Intervall:', 460, 26);
+      ctx.font = '500 12px sans-serif';
+      ctx.fillText('\u0394t\u2099 = ' + strobeInterval.toFixed(2).replace('.', ',') + ' s', 460, 40);
+    }
+  }
+
+  function drawVelocityComponents(x, y, vx, vy, scale, isStrobe){
+    const vxScaled = vx * scale;
+    const vyScaled = vy * scale;
+    const alpha = isStrobe ? 0.6 : 1.0;
+    
+    if(Math.abs(vxScaled) > 3){
+      ctx.strokeStyle = 'rgba(133, 183, 235, ' + alpha + ')';
+      ctx.fillStyle = 'rgba(133, 183, 235, ' + alpha + ')';
+      ctx.lineWidth = 1.5;
+      arrow(x, y, x + vxScaled, y, ctx.strokeStyle, ctx.lineWidth);
+      
+      ctx.fillStyle = 'rgba(55, 138, 221, ' + alpha + ')';
+      ctx.font = '500 11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('vₓ', x + vxScaled/2, y - 6);
+    }
+    
+    if(Math.abs(vyScaled) > 3){
+      ctx.strokeStyle = 'rgba(133, 183, 235, ' + alpha + ')';
+      ctx.fillStyle = 'rgba(133, 183, 235, ' + alpha + ')';
+      ctx.lineWidth = 1.5;
+      arrow(x, y, x, y + vyScaled, ctx.strokeStyle, ctx.lineWidth);
+      
+      ctx.fillStyle = 'rgba(55, 138, 221, ' + alpha + ')';
+      ctx.font = '500 11px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('vᵧ', x + 6, y + vyScaled/2 + 3);
+    }
+
+    if(Math.abs(vxScaled) > 3 && Math.abs(vyScaled) > 3){
+      ctx.strokeStyle = 'rgba(133, 183, 235, ' + (alpha * 0.3) + ')';
+      ctx.lineWidth = 0.5;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(x + vxScaled, y);
+      ctx.lineTo(x + vxScaled, y + vyScaled);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0, 0, W, H);
+
+    drawCoordinateSystem();
+    drawFoehn();
+
+    if(showTrail.checked && state.trail.length > 1){
+      ctx.strokeStyle = 'rgba(136, 135, 128, 0.4)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(state.trail[0].x, state.trail[0].y);
+      for(let i = 1; i < state.trail.length; i++){
+        ctx.lineTo(state.trail[i].x, state.trail[i].y);
+      }
+      ctx.stroke();
+    }
+
+    if(showStrobe.checked){
+      const vScale = 0.5;
+      const vCompScale = 1.0;
+      
+      for(const s of state.strobe){
+        if(showVcomp.checked){
+          drawVelocityComponents(s.x, s.y, s.vx, s.vy, vCompScale, true);
+        }
+        
+        ctx.fillStyle = 'rgba(95, 94, 90, 0.5)';
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    ctx.fillStyle = '#534AB7';
+    ctx.beginPath();
+    ctx.arc(state.x, state.y, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#26215C';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    const vScale = 1.0;
+    const fScale = 0.15;
+
+    if(showV.checked){
+      const vx = state.vx * vScale;
+      const vy = state.vy * vScale;
+      if(Math.hypot(vx, vy) > 3){
+        arrow(state.x, state.y, state.x + vx, state.y + vy, '#378ADD', 3);
+        ctx.fillStyle = '#185FA5';
+        ctx.font = '500 13px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('v', state.x + vx + 6, state.y + vy + 4);
+      }
+    }
+
+    if(showVcomp.checked && !showStrobe.checked){
+      const vCompScale = 1.0;
+      drawVelocityComponents(state.x, state.y, state.vx, state.vy, vCompScale, false);
+    }
+
+    if(showF.checked && inFoehn(state.y)){
+      const F = parseFloat(fIn.value);
+      const fx = F * fScale;
+      if(Math.abs(fx) > 3){
+        arrow(state.x, state.y, state.x + fx, state.y, '#D85A30', 3);
+        ctx.fillStyle = '#993C1D';
+        ctx.font = '500 13px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('F', state.x + fx + 6, state.y - 4);
+      }
+    }
+    
+    drawFormulas();
+    drawLegend();
+  }
+
+  function takeScreenshot(){
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = W;
+    tempCanvas.height = H + 120;
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    tempCtx.fillStyle = '#ffffff';
+    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+    
+    tempCtx.drawImage(cv, 0, 0);
+    
+    tempCtx.fillStyle = '#f5f5f0';
+    tempCtx.fillRect(0, H, W, 120);
+    
+    tempCtx.fillStyle = '#2C2C2A';
+    tempCtx.font = '500 14px sans-serif';
+    tempCtx.textAlign = 'left';
+    tempCtx.fillText('Simulationsparameter:', 20, H + 25);
+    
+    tempCtx.font = '13px sans-serif';
+    const v = (parseFloat(vIn.value) / 100).toFixed(2).replace('.', ',');
+    const f = (parseFloat(fIn.value) / 100).toFixed(1).replace('.', ',');
+    const w = (parseFloat(wIn.value) / 1000).toFixed(2).replace('.', ',');
+    const m = state.mass.toFixed(1).replace('.', ',');
+    
+    tempCtx.fillText('• Geschwindigkeit Kugel: v = ' + v + ' m/s', 20, H + 50);
+    tempCtx.fillText('• Kraft: F = ' + f + ' N', 20, H + 70);
+    tempCtx.fillText('• Breite Kraftbereich: h = ' + w + ' m', 20, H + 90);
+    tempCtx.fillText('• Masse Kugel: m = ' + m + ' kg', 20, H + 110);
+    
+    if(timeInForce > 0) {
+      tempCtx.fillText('• Einwirkzeit: Δt = ' + timeInForce.toFixed(2) + ' s', 370, H + 50);
+      const dv = ((parseFloat(fIn.value) / 100) * timeInForce / state.mass).toFixed(2).replace('.', ',');
+      tempCtx.fillText('• Geschwindigkeitsänderung: Δv = ' + dv + ' m/s', 370, H + 70);
+    }
+    
+    const date = new Date();
+    const dateStr = date.toLocaleDateString('de-DE') + ' ' + date.toLocaleTimeString('de-DE');
+    tempCtx.font = '11px sans-serif';
+    tempCtx.fillStyle = '#888780';
+    tempCtx.textAlign = 'right';
+    tempCtx.fillText(dateStr, W - 20, H + 110);
+    
+    const link = document.createElement('a');
+    link.download = 'kraftpfeil-simulation-' + Date.now() + '.png';
+    link.href = tempCanvas.toDataURL('image/png');
+    link.click();
+  }
+
+  function updateFromSlider(slider, textInput, output, divisor, decimals, unit) {
+    return function() {
+      const val = parseFloat(slider.value) / divisor;
+      const formatted = val.toFixed(decimals).replace('.', ',');
+      output.textContent = formatted + ' ' + unit;
+      textInput.value = formatted;
+      if(!running && slider === vIn) {
+        state.vy = parseFloat(slider.value);
+      }
+      draw();
+    };
+  }
+
+  function updateFromText(textInput, slider, output, divisor, decimals, unit, min, max) {
+    return function() {
+      let val = parseFloat(textInput.value.replace(',', '.'));
+      if(isNaN(val)) val = parseFloat(slider.value) / divisor;
+      val = Math.max(min, Math.min(max, val));
+      slider.value = Math.round(val * divisor);
+      const formatted = val.toFixed(decimals).replace('.', ',');
+      output.textContent = formatted + ' ' + unit;
+      textInput.value = formatted;
+      if(!running && slider === vIn) {
+        state.vy = parseFloat(slider.value);
+      }
+      draw();
+    };
+  }
+
+  function loop(t){
+    if(!running) return;
+    const dt = Math.min(0.05, (t - lastT) / 1000) * speedMultiplier;
+    lastT = t;
+    step(dt);
+    draw();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  startBtn.addEventListener('click', function(){
+    if(running){
+      running = false;
+      startBtn.textContent = 'Weiter';
+    } else {
+      running = true;
+      startBtn.textContent = 'Pause';
+      lastT = performance.now();
+      rafId = requestAnimationFrame(loop);
+    }
+  });
+
+  resetBtn.addEventListener('click', reset);
+  screenshotBtn.addEventListener('click', takeScreenshot);
+
+  document.getElementById('speed100').addEventListener('click', function(){
+    speedMultiplier = 1.0;
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('speed-active'));
+    this.classList.add('speed-active');
+  });
+  document.getElementById('speed50').addEventListener('click', function(){
+    speedMultiplier = 0.5;
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('speed-active'));
+    this.classList.add('speed-active');
+  });
+  document.getElementById('speed25').addEventListener('click', function(){
+    speedMultiplier = 0.25;
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('speed-active'));
+    this.classList.add('speed-active');
+  });
+
+  vIn.addEventListener('input', updateFromSlider(vIn, vText, vOut, 100, 2, 'm/s'));
+  vText.addEventListener('change', updateFromText(vText, vIn, vOut, 100, 2, 'm/s', 0.1, 5));
+  
+  fIn.addEventListener('input', updateFromSlider(fIn, fText, fOut, 100, 1, 'N'));
+  fText.addEventListener('change', updateFromText(fText, fIn, fOut, 100, 1, 'N', 0, 10));
+  
+  wIn.addEventListener('input', updateFromSlider(wIn, wText, wOut, 1000, 2, 'm'));
+  wText.addEventListener('change', updateFromText(wText, wIn, wOut, 1000, 2, 'm', 0.02, 0.5));
+
+  function updateStrobeInterval() {
+    const val = parseFloat(strobeIn.value) / 100;
+    strobeInterval = val;
+    const fmt = val.toFixed(2).replace('.', ',');
+    strobeOut.textContent = fmt + ' s';
+    strobeText.value = fmt;
+    draw();
+  }
+
+  strobeIn.addEventListener('input', function() {
+    updateStrobeInterval();
+  });
+
+  strobeText.addEventListener('change', function() {
+    let val = parseFloat(strobeText.value.replace(',', '.'));
+    if(isNaN(val)) val = strobeInterval;
+    val = Math.max(0.05, Math.min(1.0, val));
+    strobeIn.value = Math.round(val * 100);
+    strobeInterval = val;
+    const fmt = val.toFixed(2).replace('.', ',');
+    strobeOut.textContent = fmt + ' s';
     strobeTex
