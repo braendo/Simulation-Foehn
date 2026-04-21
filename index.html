@@ -260,7 +260,7 @@
         <button class="screenshot-btn" id="screenshotBtn">📸 Screenshot</button>
 
         <div class="slider-group">
-          <label><span>Geschw. Kugel</span><span class="value" id="vOut">1,00 m/s</span></label>
+          <label><span>Geschw. Kugel (v<sub>y</sub>)</span><span class="value" id="vOut">1,00 m/s</span></label>
           <div class="slider-controls">
             <input id="vIn" type="range" min="10" max="500" value="100" step="1">
             <input id="vText" class="value-input" type="text" value="1,00">
@@ -276,7 +276,7 @@
         </div>
 
         <div class="slider-group">
-          <label><span>Höhe Kraftbereich</span><span class="value" id="wOut">0,10 m</span></label>
+          <label><span>Breite Kraftbereich</span><span class="value" id="wOut">0,10 m</span></label>
           <div class="slider-controls">
             <input id="wIn" type="range" min="20" max="500" value="100" step="5">
             <input id="wText" class="value-input" type="text" value="0,10">
@@ -309,7 +309,7 @@
     </div>
 
     <div class="hint">
-      <strong>Bedienung:</strong> Mit „Start" die Kugel loslassen. Sie fällt von oben nach unten. Sobald sie den blauen Kraftbereich durchquert, wirkt eine Kraft in x-Richtung. Die Schieberegler beeinflussen die Anfangsgeschwindigkeit der Kugel, die Stärke der Kraft und die Höhe (y-Ausdehnung) des Kraftbereichs und damit die Einwirkzeit Δt.
+      <strong>Bedienung:</strong> Mit „Start" die Kugel starten. Sie bewegt sich mit gleichbleibender Geschwindigkeit in y-Richtung (z.&nbsp;B. wie eine rollende Kugel auf einem Tisch). Sobald sie den blauen Kraftbereich durchquert, wirkt zusätzlich eine Kraft in x-Richtung. Die Schieberegler beeinflussen die Anfangsgeschwindigkeit der Kugel, die Stärke der Kraft und die Ausdehnung des Kraftbereichs in y-Richtung und damit die Einwirkzeit Δt.
     </div>
   </div>
 
@@ -406,7 +406,7 @@ const aufgabenData = [
   {
     id: 5,
     title: 'Aufgabe 6 – Verbundaufgabe (Simulation nachrechnen)',
-    text: 'In der Simulation fällt eine Kugel (m = <strong>1 kg</strong>) mit v<sub>y</sub> = <strong>2 m/s</strong> durch einen Kraftbereich der Höhe <strong>h = 0,20 m</strong>. Die horizontale Kraft beträgt <strong>F = 5 N</strong>. Berechne die horizontale Geschwindigkeit v<sub>x</sub>, die die Kugel nach dem Kraftbereich hat.',
+    text: 'In der Simulation bewegt sich eine Kugel (m = <strong>1 kg</strong>) mit v<sub>y</sub> = <strong>2 m/s</strong> durch einen Kraftbereich der Ausdehnung <strong>h = 0,20 m</strong> in y-Richtung. Die horizontale Kraft beträgt <strong>F = 5 N</strong>. Berechne die horizontale Geschwindigkeit v<sub>x</sub>, die die Kugel nach dem Kraftbereich hat.',
     hint: 'Zuerst Einwirkzeit aus Δt = h / v berechnen, dann Δv = (F · Δt) / m',
     formula: 'Δt = h / v,  Δv = (F · Δt) / m',
     answer: 0.5,
@@ -510,7 +510,7 @@ const quizData = [
     competence: "kennzeichnen in Stroboskopdarstellungen die Geschwindigkeit durch Pfeile"
   },
   {
-    question: "In der Simulation bewegt sich die Kugel zunächst nur nach unten. Was passiert mit v<sub>y</sub>, wenn die horizontale Kraft wirkt?",
+    question: "In der Simulation bewegt sich die Kugel zunächst nur in y-Richtung (gleichmäßig, wie auf einem Tisch). Was passiert mit v<sub>y</sub>, wenn die horizontale Kraft in x-Richtung wirkt?",
     type: "multiple-choice",
     options: [
       "v<sub>y</sub> wird größer",
@@ -566,7 +566,7 @@ const quizData = [
     competence: "bestimmen zeichnerisch die Geschwindigkeitsänderung"
   },
   {
-    question: "In der Simulation kannst du die Einwirkzeit Δt durch die Höhe des Kraftbereichs verändern. Was beobachtest du, wenn du die Höhe verdoppelst (bei gleicher Kraft)?",
+    question: "In der Simulation kannst du die Einwirkzeit Δt durch die Breite des Kraftbereichs verändern. Was beobachtest du, wenn du die Breite verdoppelst (bei gleicher Kraft)?",
     type: "multiple-choice",
     options: [
       "Die Ablenkung wird halb so groß",
@@ -1276,7 +1276,7 @@ function checkQuizCompletion() {
     
     tempCtx.fillText('• Geschwindigkeit Kugel: v = ' + v + ' m/s', 20, H + 50);
     tempCtx.fillText('• Kraft: F = ' + f + ' N', 20, H + 70);
-    tempCtx.fillText('• Höhe Kraftbereich: h = ' + w + ' m', 20, H + 90);
+    tempCtx.fillText('• Breite Kraftbereich: h = ' + w + ' m', 20, H + 90);
     tempCtx.fillText('• Masse Kugel: m = ' + m + ' kg', 20, H + 110);
     
     if(timeInForce > 0) {
